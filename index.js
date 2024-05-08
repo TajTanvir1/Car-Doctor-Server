@@ -1,15 +1,19 @@
+require('dotenv').config()
 const express = require('express');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
+const cookieParser = require('cookie-parser');
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
-require('dotenv').config()
 const app = express();
 const port = process.env.PORT || 5000;
 
 // middleware
-app.use(cors());
+app.use(cors({
+    origin:['http://localhost:5173', 'http://localhost:5174'],
+    credentials: true
+}));
 app.use(express.json());
-
+app.use(cookieParser());
 
 console.log(process.env.DB_PASS, process.env.DB_USER)
 
@@ -38,15 +42,16 @@ async function run() {
             const user = req.body;
             console.log(user);
             const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {expiresIn: '1h'})
-
+            console.log(process.env.ACCESS_TOKEN_SECRET)
             res
             .cookie('token', token, {
                 httpOnly: true,
-                secure: false,
-                sameSite: 'none'
+                secure: process.env.NODE_ENV === 'production',
+                sameSite: 'strict'
             })
-            .send({success: true});
-
+            .send(token);
+            console.log(token)
+// process.env.NODE_ENV === 'production'? 'none' :
         })
 
 
@@ -74,6 +79,7 @@ async function run() {
         // bookings 
         app.get('/bookings', async (req, res) => {
             console.log(req.query.email);
+            console.log('token', req.cookies.token)
             let query = {};
             if (req.query?.email) {
                 query = { email: req.query.email }
